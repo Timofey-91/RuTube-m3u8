@@ -1,63 +1,87 @@
-import requests
-import re
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+import time
 import json
-from urllib.parse import unquote
+import os
+
+def save_debug_info(driver, step):
+    if not os.path.exists('debug'):
+        os.makedirs('debug')
+    timestamp = int(time.time())
+    with open(f'debug/page_{step}_{timestamp}.html', 'w') as f:
+        f.write(driver.page_source)
+    driver.save_screenshot(f'debug/screen_{step}_{timestamp}.png')
 
 def get_m3u8_url():
-    # Метод 1: Через основной API
-    try:
-        api_url = "https://rutube.ru/api/play/options/3b7d1499da9396462bfd17282d758d30/"
-        params = {
-            "no_404": "true",
-            "pver": "v2",
-            "client": "wdp"
-        }
-        response = requests.get(api_url, params=params, timeout=10)
-        data = response.json()
-        if "video_balancer" in data and "m3u8" in data["video_balancer"]:
-            return data["video_balancer"]["m3u8"]
-    except:
-        pass
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
 
-    # Метод 2: Через embed-страницу
-    try:
-        embed_url = "https://rutube.ru/play/embed/3b7d1499da9396462bfd17282d758d30"
-        response = requests.get(embed_url, timeout=10)
-        match = re.search(r'"m3u8":"(https?://[^"]+)"', response.text)
-        if match:
-            return unquote(match.group(1))
-    except:
-        pass
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=chrome_options
+    )
 
-    # Метод 3: Через публичный API
     try:
-        public_api = "https://rutube.ru/api/video/3b7d1499da9396462bfd17282d758d30/"
-        response = requests.get(public_api, timeout=10)
-        data = response.json()
-        if "video_balancer" in data and "m3u8" in data["video_balancer"]:
-            return data["video_balancer"]["m3u8"]
-    except:
-        pass
+        # Шаг 1: Загружаем embed-страницу
+        driver.get("https://rutube.ru/play/embed/3b7d1499da9396462bfd17282d758d30")
+        time.sleep(5)
+        save_debug_info(driver, '1_loaded')
 
-    return None
+        # Шаг 2: Ищем iframe с плеером
+        iframes = driver.find_elements(By.TAG_NAME, 'iframe')
+        for iframe in iframes:
+            driver.switch_to.frame(iframe)
+            time.sleep(2)
+            save_debug_info(driver, '2_iframe')
+            
+            # Шаг 3: Ищем JSON-данные в скриптах
+            scripts = driver.find_elements(By.TAG_NAME, 'script')
+            for script in scripts:
+                if 'm3u8' in script.get_attribute('innerHTML'):
+                    content = script.get_attribute('innerHTML')
+                    match = re.search(r'"m3u8"\s*:\s*"([^"]+)"', content)
+                    if match:
+                        return match.group(1)
+            
+            driver.switch_to.default_content()
+
+        # Шаг 4: Альтернативный поиск в основном контенте
+        scripts = driver.find_elements(By.TAG_NAME, 'script')
+        for script in scripts:
+            content = script.get_attribute('innerHTML')
+            if 'm3u8' in content:
+                match = re.search(r'https?://[^\s]+\.m3u8', content)
+                if match:
+                    return match.group(0)
+
+        raise Exception("M3U8 URL не найдена")
+
+    except Exception as e:
+        print(f"Ошибка: {str(e)}")
+        save_debug_info(driver, 'error')
+        return None
+    finally:
+        driver.quit()
 
 if __name__ == "__main__":
     m3u8_url = get_m3u8_url()
     
     if m3u8_url:
-        # Проверяем доступность ссылки
-        try:
-            test = requests.head(m3u8_url, timeout=5)
-            if test.status_code == 200:
-                with open("rutube.m3u", "w", encoding="utf-8") as f:
-                    f.write(f"""#EXTM3U
-#EXTINF:-1 tvg-id="rutube" tvg-name="Rutube Stream",Rutube Live
+        print(f"Найдена ссылка: {m3u8_url}")
+        with open("rutube.m3u", "w") as f:
+            f.write(f"""#EXTM3U
+#EXTINF:-1,Rutube Stream
 {m3u8_url}
 """)
-                print("M3U8 URL успешно получена и проверена")
-                exit(0)
-        except:
-            pass
-    
-    print("Все методы получения M3U8 URL не сработали")
-    exit(1)
+        exit(0)
+    else:
+        print("Не удалось получить M3U8 URL")
+        exit(1)
