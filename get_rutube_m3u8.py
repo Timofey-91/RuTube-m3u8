@@ -18,7 +18,7 @@ def get_m3u8_url():
     )
     
     try:
-        driver.get("https://rutube.ru/play/embed/3b7d1499da9396462bfd17282d758d30")
+        driver.get("https://rutube.ru/live/video/3b7d1499da9396462bfd17282d758d30/")
         time.sleep(5)  # Ожидаем загрузки страницы
         
         # Ищем данные в JavaScript
