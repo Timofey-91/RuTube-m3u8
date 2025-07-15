@@ -1,80 +1,52 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import time
+import requests
 import re
-import os
-import sys
-
-def setup_driver():
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    
-    service = Service(executable_path="/usr/bin/chromedriver")
-    return webdriver.Chrome(service=service, options=options)
-
-def save_debug(driver, step):
-    os.makedirs("debug", exist_ok=True)
-    with open(f"debug/page_{step}.html", "w", encoding="utf-8") as f:
-        f.write(driver.page_source)
-    driver.save_screenshot(f"debug/screen_{step}.png")
+import json
+from urllib.parse import unquote
 
 def get_m3u8():
-    driver = setup_driver()
     try:
-        # Этап 1: Загрузка страницы
-        driver.get("https://rutube.ru/play/embed/3b7d1499da9396462bfd17282d758d30")
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.TAG_NAME, "iframe"))
-        )
-        save_debug(driver, "1_loaded")
-
-        # Этап 2: Работа с iframe
-        iframe = driver.find_element(By.TAG_NAME, "iframe")
-        driver.switch_to.frame(iframe)
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.TAG_NAME, "script"))
-        )
-        save_debug(driver, "2_iframe")
-
-        # Этап 3: Поиск m3u8
-        scripts = driver.find_elements(By.TAG_NAME, "script")
-        for script in scripts:
-            content = script.get_attribute("innerHTML")
-            if "m3u8" in content:
-                match = re.search(r'(https?://[^\s]+\.m3u8)', content)
-                if match:
-                    # Проверяем доступность ссылки
-                    test_driver = setup_driver()
-                    try:
-                        test_driver.get(match.group(1))
-                        if "EXTM3U" in test_driver.page_source:
-                            return match.group(1)
-                    finally:
-                        test_driver.quit()
-
-        raise Exception("M3U8 не найдена")
+        # Прямой запрос к API Rutube
+        api_url = "https://rutube.ru/api/play/options/3b7d1499da9396462bfd17282d758d30/"
+        params = {
+            "no_404": "true",
+            "pver": "v2",
+            "client": "wdp"
+        }
+        response = requests.get(api_url, params=params, timeout=10)
+        data = response.json()
+        
+        # Основной способ получения ссылки
+        m3u8_url = data.get("video_balancer", {}).get("m3u8")
+        if m3u8_url:
+            return m3u8_url
+        
+        # Альтернативный способ для старых версий API
+        embed_url = "https://rutube.ru/play/embed/3b7d1499da9396462bfd17282d758d30"
+        html = requests.get(embed_url).text
+        match = re.search(r'"m3u8":"(https?://[^"]+)"', html)
+        if match:
+            return unquote(match.group(1))
+        
+        # Если ничего не найдено
+        raise Exception("Ссылка не найдена в API и HTML")
+    
     except Exception as e:
-        print(f"Ошибка: {str(e)}", file=sys.stderr)
-        save_debug(driver, "error")
+        print(f"Ошибка: {e}")
         return None
-    finally:
-        driver.quit()
 
 if __name__ == "__main__":
     m3u8_url = get_m3u8()
+    
     if m3u8_url:
-        with open("rutube.m3u", "w", encoding="utf-8") as f:
-            f.write(f"""#EXTM3U
+        # Формируем M3U-плейлист
+        playlist = f"""#EXTM3U
 #EXTINF:-1,Rutube Stream
 {m3u8_url}
-""")
-        sys.exit(0)
-    sys.exit(1)
+"""
+        print(playlist)  # Выводим результат в консоль
+        
+        with open("rutube.m3u", "w", encoding="utf-8") as f:
+            f.write(playlist)
+    else:
+        print("Не удалось получить ссылку на поток")
+        exit(1)
