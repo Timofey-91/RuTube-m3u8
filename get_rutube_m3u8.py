@@ -30,7 +30,7 @@ def get_m3u8():
     driver = setup_driver()
     try:
         # Этап 1: Загрузка страницы
-        driver.get("https://rutube.ru/api/play/options/3b7d1499da9396462bfd17282d758d30/")
+        driver.get("https://rutube.ru/play/embed/3b7d1499da9396462bfd17282d758d30")
         WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.TAG_NAME, "iframe"))
         )
