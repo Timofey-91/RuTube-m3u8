@@ -7,7 +7,7 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -24,9 +24,10 @@ jobs:
           pip install selenium webdriver-manager requests
           
       - name: Run M3U8 Updater
+        id: m3u8-updater
         run: |
           mkdir -p debug
-          python get_rutube_m3u8.py || echo "Попытка получения ссылки не удалась"
+          python get_rutube_m3u8.py && echo "success=true" >> $GITHUB_OUTPUT || echo "success=false" >> $GITHUB_OUTPUT
           
       - name: Upload debug info
         if: always()
@@ -37,10 +38,10 @@ jobs:
           retention-days: 1
           
       - name: Commit and Push
-        if: success()
+        if: steps.m3u8-updater.outputs.success == 'true'
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add rutube.m3u
-          git diff-index --quiet HEAD || git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M')"
+          git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M')"
           git push
