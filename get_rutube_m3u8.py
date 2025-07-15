@@ -22,7 +22,7 @@ def setup_driver():
 
 def save_debug(driver, step):
     os.makedirs("debug", exist_ok=True)
-    with open(f"debug/page_{step}.html", "w") as f:
+    with open(f"debug/page_{step}.html", "w", encoding="utf-8") as f:
         f.write(driver.page_source)
     driver.save_screenshot(f"debug/screen_{step}.png")
 
@@ -30,8 +30,8 @@ def get_m3u8():
     driver = setup_driver()
     try:
         # Этап 1: Загрузка страницы
-        driver.get("https://rutube.ru/play/embed/3b7d1499da9396462bfd17282d758d30")
-        WebDriverWait(driver, 10).until(
+        driver.get("https://rutube.ru/api/play/options/3b7d1499da9396462bfd17282d758d30/")
+        WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.TAG_NAME, "iframe"))
         )
         save_debug(driver, "1_loaded")
@@ -39,7 +39,7 @@ def get_m3u8():
         # Этап 2: Работа с iframe
         iframe = driver.find_element(By.TAG_NAME, "iframe")
         driver.switch_to.frame(iframe)
-        WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.TAG_NAME, "script"))
         )
         save_debug(driver, "2_iframe")
@@ -51,23 +51,30 @@ def get_m3u8():
             if "m3u8" in content:
                 match = re.search(r'(https?://[^\s]+\.m3u8)', content)
                 if match:
-                    return match.group(1)
+                    # Проверяем доступность ссылки
+                    test_driver = setup_driver()
+                    try:
+                        test_driver.get(match.group(1))
+                        if "EXTM3U" in test_driver.page_source:
+                            return match.group(1)
+                    finally:
+                        test_driver.quit()
 
         raise Exception("M3U8 не найдена")
+    except Exception as e:
+        print(f"Ошибка: {str(e)}", file=sys.stderr)
+        save_debug(driver, "error")
+        return None
     finally:
         driver.quit()
 
 if __name__ == "__main__":
-    try:
-        m3u8_url = get_m3u8()
-        if m3u8_url:
-            with open("rutube.m3u", "w") as f:
-                f.write(f"""#EXTM3U
+    m3u8_url = get_m3u8()
+    if m3u8_url:
+        with open("rutube.m3u", "w", encoding="utf-8") as f:
+            f.write(f"""#EXTM3U
 #EXTINF:-1,Rutube Stream
 {m3u8_url}
 """)
-            sys.exit(0)
-    except Exception as e:
-        print(f"Ошибка: {str(e)}", file=sys.stderr)
-    
+        sys.exit(0)
     sys.exit(1)
