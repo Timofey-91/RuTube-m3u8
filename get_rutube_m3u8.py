@@ -1,49 +1,47 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-import time
+import requests
 import json
-import re
 
 def get_m3u8_url():
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=options
-    )
-    
+    api_url = "https://rutube.ru/api/play/options/3b7d1499da9396462bfd17282d758d30/"
+    params = {
+        "no_404": "true",
+        "referer": "",
+        "pver": "v2",
+        "client": "wdp"
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "application/json"
+    }
+
     try:
-        driver.get("https://rutube.ru/live/video/3b7d1499da9396462bfd17282d758d30/")
-        time.sleep(5)  # Ожидаем загрузки страницы
+        response = requests.get(api_url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
         
-        # Ищем данные в JavaScript
-        page_source = driver.page_source
-        m3u8_match = re.search(r'"m3u8":"(https?://[^"]+)"', page_source)
+        data = response.json()
+        m3u8_url = data.get("video_balancer", {}).get("m3u8")
         
-        if m3u8_match:
-            return m3u8_match.group(1)
+        if not m3u8_url:
+            raise ValueError("M3U8 URL не найдена в ответе API")
             
-        raise Exception("M3U8 URL не найдена")
-        
-    finally:
-        driver.quit()
+        return m3u8_url
+
+    except Exception as e:
+        print(f"API Error: {e}")
+        return None
 
 if __name__ == "__main__":
-    try:
-        m3u8_url = get_m3u8_url()
-        
-        with open("rutube.m3u", "w") as f:
-            f.write(f"""#EXTM3U
-#EXTINF:-1,Rutube Stream
+    m3u8_url = get_m3u8_url()
+    
+    if m3u8_url:
+        playlist = f"""#EXTM3U
+#EXTINF:-1 tvg-id="rutube" tvg-name="Rutube Stream" tvg-logo="https://rutube.ru/favicon.ico",Rutube Live
 {m3u8_url}
-""")
-        print("M3U8 URL успешно получена!")
-        
-    except Exception as e:
-        print(f"Ошибка: {e}")
+#EXTGRP:Live Streams
+"""
+        with open("rutube.m3u", "w", encoding="utf-8") as f:
+            f.write(playlist)
+        print("Плейлист успешно обновлён")
+    else:
+        print("Не удалось получить M3U8 URL")
         exit(1)
