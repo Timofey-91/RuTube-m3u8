@@ -1,14 +1,12 @@
-name: Update Rutube Stream
+name: Publish Rutube Stream
 on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
 jobs:
-  update:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
     steps:
       - uses: actions/checkout@v4
       
@@ -18,30 +16,27 @@ jobs:
           python-version: '3.10'
           
       - name: Install dependencies
+        run: pip install requests
+
+      - name: Get M3U8 link
+        id: get-link
         run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver
-          pip install selenium webdriver-manager requests
+          OUTPUT=$(python get_rutube_m3u8.py)
+          echo "::set-output name=playlist::$OUTPUT"
+          echo "$OUTPUT" > rutube.m3u
           
-      - name: Run M3U8 Updater
-        id: m3u8-updater
-        run: |
-          mkdir -p debug
-          python get_rutube_m3u8.py && echo "success=true" >> $GITHUB_OUTPUT || echo "success=false" >> $GITHUB_OUTPUT
-          
-      - name: Upload debug info
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-info
-          path: debug/
-          retention-days: 1
-          
-      - name: Commit and Push
-        if: steps.m3u8-updater.outputs.success == 'true'
+      - name: Commit and push
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add rutube.m3u
-          git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M')"
+          git commit -m "Update stream link [auto]"
           git push
+
+      - name: Show result
+        run: |
+          echo "Ваша ссылка для плеера:"
+          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/rutube.m3u"
+          echo ""
+          echo "Содержимое файла:"
+          cat rutube.m3u
