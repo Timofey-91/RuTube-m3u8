@@ -3,7 +3,7 @@ import requests
 def get_m3u8_url(video_id):
     """
     Получает ссылку на m3u8-поток по video_id с Rutube.
-    Использует правильный endpoint вида /api/play/options/{video_id}.
+    Использует endpoint /api/play/options/{video_id}.
     """
     try:
         url = f"https://rutube.ru/api/play/options/{video_id}"
@@ -18,3 +18,4 @@ def get_m3u8_url(video_id):
     except Exception as e:
         print(f"Ошибка при обработке данных от Rutube ({video_id}): {e}")
     return None
+
