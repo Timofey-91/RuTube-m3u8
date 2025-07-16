@@ -25,22 +25,23 @@ def auto_update_streams():
         m3u8_cache.update(updated)
         time.sleep(7 * 24 * 60 * 60)  # раз в 7 дней
 
+# 📌 Инициализация кэша при старте (работает и на Render, и локально)
+m3u8_cache.update(update_all_streams(channels_to_update))
+
+# 📌 Фоновый поток запускается всегда
+updater_thread = threading.Thread(target=auto_update_streams, daemon=True)
+updater_thread.start()
+
 @app.route("/channel/<channel_name>")
 def serve_channel(channel_name):
     """
-    Перенаправление сразу на прямую m3u8 ссылку.
+    Перенаправление на прямую m3u8 ссылку.
     """
     m3u8_url = m3u8_cache.get(channel_name)
     if not m3u8_url:
         return "Channel not found or stream unavailable", 404
     return redirect(m3u8_url, code=302)
 
+# ✅ Запуск только при локальной разработке
 if __name__ == "__main__":
-    # начальное обновление и запуск сервера
-    m3u8_cache.update(update_all_streams(channels_to_update))
-
-    # поток для автообновления
-    updater_thread = threading.Thread(target=auto_update_streams, daemon=True)
-    updater_thread.start()
-
     app.run(host="0.0.0.0", port=8000)
