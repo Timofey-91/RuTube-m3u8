@@ -18,17 +18,13 @@ def index():
     )
 
 @app.route("/channel/<channel_name>")
-def stream_channel(channel_name):
-    if channel_name not in channels_to_update:
-        return abort(404, description="Канал не найден.")
-    
-    video_id = channels_to_update[channel_name]
-    m3u8_url = get_m3u8_url(video_id)
+def serve_channel(channel_name):
+    m3u8_url = m3u8_cache.get(channel_name)
     if not m3u8_url:
-        return abort(503, description="Поток недоступен.")
-
-    # Проксируем как .m3u8
+        return "Channel not found or stream unavailable", 404
     return redirect(m3u8_url, code=302)
+
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)
