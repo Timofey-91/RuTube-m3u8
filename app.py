@@ -28,10 +28,7 @@ def stream_channel(channel_name):
         return abort(503, description="Поток недоступен.")
 
     # Проксируем как .m3u8
-    return Response(
-        f"#EXTM3U\n#EXTINF:-1,{channel_name}\n{m3u8_url}\n",
-        mimetype="application/vnd.apple.mpegurl"
-    )
+    return redirect(m3u8_url, code=302)
 
 if __name__ == "__main__":
     app.run(debug=True)
