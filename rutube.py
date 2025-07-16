@@ -1,9 +1,6 @@
 import requests
 
 def get_m3u8_url(video_id):
-    """
-    Получает ссылку на m3u8-поток по video_id с Rutube.
-    """
     try:
         url = f"https://rutube.ru/api/play/options/{video_id}"
         response = requests.get(url, timeout=10)
@@ -12,17 +9,20 @@ def get_m3u8_url(video_id):
         hls_streams = data.get("live_streams", {}).get("hls", [])
         if hls_streams:
             return hls_streams[0].get("url")
+    except requests.exceptions.RequestException as e:
+        print(f"HTTP ошибка: {e}")
     except Exception as e:
-        print(f"Ошибка для {video_id}: {e}")
+        print(f"Ошибка обработки: {e}")
     return None
 
-def update_all_streams(channel_dict):
-    """
-    Обновляет все каналы и возвращает словарь {channel_name: m3u8_url}
-    """
-    result = {}
-    for name, video_id in channel_dict.items():
-        url = get_m3u8_url(video_id)
-        if url:
-            result[name] = url
-    return result
+def update_all_streams(channels_dict):
+    updated = {}
+    for name, video_id in channels_dict.items():
+        print(f"🔍 Обновляем {name}...")
+        stream_url = get_m3u8_url(video_id)
+        if stream_url:
+            print(f"✅ Найден поток для {name}: {stream_url}")
+            updated[name] = stream_url
+        else:
+            print(f"❌ Поток не найден для {name}")
+    return updated
