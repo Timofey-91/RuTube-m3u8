@@ -10,7 +10,7 @@ channels_to_update = {
     "kino_i_zhizn": "09e51eefa939595a4ac67182c6fb3e4e",
     "kinozhelezo": "4965b7b928c4a143d708ab424be01d37",
     "sreda": "5fa486bf465c8735fff9f41b372610cc",
-    "kinolenta": "23c568b69e0eada33560850484223739"
+    "samotlor": "695f0fdefc96b6f7f2b4a311b71f596b"
 }
 
 # Кэш ссылок
