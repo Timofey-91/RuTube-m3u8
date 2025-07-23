@@ -44,4 +44,4 @@ def serve_channel(channel_name):
 
 # ✅ Запуск только при локальной разработке
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=9000)
