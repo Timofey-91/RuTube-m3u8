@@ -26,7 +26,7 @@ def auto_update_streams():
         print("🔄 Обновление ссылок на потоки...")
         updated = update_all_streams(channels_to_update)
         m3u8_cache.update(updated)
-        time.sleep(7 * 24 * 60 * 60)  # раз в 7 дней
+        time.sleep(6 * 60 * 60)  # каждые 6 часов
 
 # 📌 Инициализация кэша при старте (работает и на Render, и локально)
 m3u8_cache.update(update_all_streams(channels_to_update))
