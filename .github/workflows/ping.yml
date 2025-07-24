@@ -1,0 +1,28 @@
+name: Keep Fly.io App Alive
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # каждые 5 минут
+  workflow_dispatch:       # запуск вручную
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Fly.io app (kino_i_zhizn)
+        run: curl -s https://iptv-streamer.onrender.com/channel/kino_i_zhizn > /dev/null
+
+      - name: Ping Fly.io app (kinozhelezo)
+        run: curl -s https://iptv-streamer.onrender.com/channel/kinozhelezo > /dev/null
+
+      - name: Ping Fly.io app (sreda)
+        run: curl -s https://iptv-streamer.onrender.com/channel/sreda > /dev/null
+
+      - name: Ping Fly.io app (samotlor)
+        run: curl -s https://iptv-streamer.onrender.com/channel/samotlor > /dev/null
+
+      - name: Ping Fly.io app (tvoy2007)
+        run: curl -s https://iptv-streamer.onrender.com/channel/tvoy2007 > /dev/null
+
+      - name: Ping Fly.io app (comedy_hub)
+        run: curl -s https://iptv-streamer.onrender.com/channel/comedy_hub > /dev/null
