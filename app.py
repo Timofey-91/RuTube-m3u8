@@ -12,7 +12,8 @@ channels_to_update = {
     "sreda": "5fa486bf465c8735fff9f41b372610cc",
     "samotlor": "695f0fdefc96b6f7f2b4a311b71f596b",
     "tvoy2007": "348ebaac61a382f2028e9a1b06f4f2b6",
-    "comedy_hub": "dcc02ed1ff97923541c6d4c030c54c65"
+    "comedy_hub": "dcc02ed1ff97923541c6d4c030c54c65",
+    "tsargrad": "91815da4edb167b5bd617bae490e57da"
 }
 
 # Кэш ссылок
