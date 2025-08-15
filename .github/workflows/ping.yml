@@ -26,3 +26,7 @@ jobs:
 
       - name: Ping Fly.io app (comedy_hub)
         run: curl -s https://iptv-streamer.onrender.com/channel/comedy_hub > /dev/null
+      - name: Ping Fly.io app (comedy_hub)
+        run: curl -s https://iptv-streamer.onrender.com/channel/tsargrad > /dev/null
+
+        
